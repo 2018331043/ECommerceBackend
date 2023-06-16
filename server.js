@@ -29,11 +29,12 @@ app.post('/signin',async (req, res) => {
         con.query(`SELECT * FROM user where user.email = "${req.body.email}"`, function (err, result) {
             if (err) throw err;
             else{
-                if(req.body.password===result[0].password_hash){
+                if(req.body.password===result[0].password){
                     const user={
                         id:result[0].id,
                         user_name:result[0].user_name,
                         email:result[0].email,
+                        type:result[0].type
                     }
                     const accessToken=jwt.sign(user,process.env.SECRET_KEY);
                     res.json({accessToken:accessToken,user:user})
@@ -52,9 +53,10 @@ app.post('/signin',async (req, res) => {
 app.post('/signup', async (req, res) => {
     try{
         const user={
-            user_name:req.body.user_name,
+            user_name:req.body.userName,
+            phone_number:req.body.phoneNumber,
             email:req.body.email,
-            password_hash:req.body.password_hash
+            password:req.body.password
         }
         con.query(`Insert into user Set ? `,user ,function (err, result) {
             if (err) throw err;
