@@ -56,7 +56,8 @@ app.post('/signup', async (req, res) => {
             user_name:req.body.userName,
             phone_number:req.body.phoneNumber,
             email:req.body.email,
-            password:req.body.password
+            password:req.body.password,
+            type:req.body.type
         }
         con.query(`Insert into user Set ? `,user ,function (err, result) {
             if (err) throw err;
@@ -67,6 +68,176 @@ app.post('/signup', async (req, res) => {
     }catch (e){
         console.log(e);
     }
+
+});
+
+app.get('/get-bank-account', authenticateToken, async (req, res) => {
+    try{
+        var query=`Select * from bank where bank.user_id = ${req.query.id}`
+        con.query(query,function (err, result) {
+            if (err) throw err;
+            else{
+                res.send(result);
+            }
+        });
+    }catch (e){
+        console.log(e);
+    }
+});
+
+app.get('/get-items-count', authenticateToken, async (req, res) => {
+    try{
+        var query=`Select * from product `
+        con.query(query,function (err, result) {
+            if (err) throw err;
+            else{
+                res.send(result);
+            }
+        });
+    }catch (e){
+        console.log(e);
+    }
+});
+
+
+app.post('/create-bank-account', authenticateToken, async (req, res) => {
+    try{
+        const min = 10000;
+        const max = 100000;
+        const info={
+            ac_no:req.body.accountId,
+            user_id:req.user.id,
+            amount: Math.floor(Math.random() * (max - min + 1)) + min
+        }
+        con.query(`Insert into bank Set ? `,info ,function (err, result) {
+            if (err) throw err;
+            else{
+                res.send('User Created');
+            }
+        });
+    }catch (e){
+        console.log(e);
+    }
+});
+
+app.post('/save-stock', authenticateToken, async (req, res) => {
+    try{
+        req.body.items.forEach(pd=>{
+            var info = {
+                stock_count:pd.count
+            }
+            con.query(`Update product
+                       set ?
+                       where product.id = ${pd.id}`, info ,function (err, result) {
+                if (err) throw err;
+                else{
+
+                }
+            });
+        })
+
+    }catch (e){
+        console.log(e);
+    }finally {
+        res.send('Update Successful');
+    }
+});
+app.post('/purchase-product', authenticateToken, async (req, res) => {
+        try {
+            req.body.itemList.forEach((prod) => {
+                var inf = {
+                    stock_count: prod.count
+                }
+                try {
+                    con.query(`Select *
+                               from product
+                               where product.id = ${prod.id}`, function (err, result) {
+                        if (err) throw err;
+                        else {
+                            var inf2 = {
+                                stock_count: result[0].stock_count - prod.count,
+                            }
+                            try {
+                                con.query(`Update product
+                                           set ?
+                                           where product.id = ${prod.id}`, inf2, function (err, result) {
+                                    if (err) throw err;
+                                    else {
+
+                                    }
+                                });
+                            } catch (e) {
+                                console.log(e);
+                            }
+                        }
+                    });
+                } catch (e) {
+                    console.log(e);
+                }
+            })
+            try {
+                con.query(`Select *
+                        from bank
+                            where bank.user_id = ${req.user.id}`, function (err, result) {
+                    if (err) throw err;
+                    else {
+                        var inf2 = {
+                            amount: result[0].amount - req.body.total,
+                        }
+                        try {
+                            con.query(`Update bank
+                                                    set ?
+                                                     where bank.user_id = ${req.user.id}`, inf2, function (err, result) {
+                                if (err) throw err;
+                                else {
+
+                                }
+                            });
+                        } catch (e) {
+                            console.log(e);
+                        }
+                    }
+                });
+            } catch (e) {
+                console.log(e);
+            }
+            try {
+                con.query(`Select * from user where  user.type = 2 `,function (err, result) {
+                    if (err) throw err;
+                    else{
+                        var supplierId = result[0].id;
+                        con.query(`Select *
+                                   from bank
+                                   where bank.user_id = ${supplierId}`, function (err, result) {
+                            if (err) throw err;
+                            else {
+                                var inf2 = {
+                                    amount: result[0].amount + req.body.total,
+                                }
+                                try {
+                                    con.query(`Update bank
+                                                    set ?
+                                                     where bank.user_id = ${supplierId}`, inf2, function (err, result) {
+                                        if (err) throw err;
+                                        else {
+
+                                        }
+                                    });
+                                } catch (e) {
+                                    console.log(e);
+                                }
+                            }
+                        });
+                    }
+                });
+            } catch (e) {
+                console.log(e);
+            }
+        }catch (e) {
+            console.log(e);
+        } finally {
+            res.send('Item Purchased');
+        }
 
 });
 app.get('/', (req, res) => {
