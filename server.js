@@ -99,7 +99,32 @@ app.get('/get-items-count', authenticateToken, async (req, res) => {
     }
 });
 
-
+app.get('/get-pending-items', authenticateToken, async (req, res) => {
+    try{
+        var query=`Select * from \`order\` where order.customer_id = ${req.user.id}`
+        con.query(query,function (err, result) {
+            if (err) throw err;
+            else{
+                res.send(result);
+            }
+        });
+    }catch (e){
+        console.log(e);
+    }
+});
+app.get('/get-pending-requests', authenticateToken, async (req, res) => {
+    try{
+        var query=`Select * from \`order\` where order.supplier_id = ${req.user.id}`
+        con.query(query,function (err, result) {
+            if (err) throw err;
+            else{
+                res.send(result);
+            }
+        });
+    }catch (e){
+        console.log(e);
+    }
+});
 app.post('/create-bank-account', authenticateToken, async (req, res) => {
     try{
         const min = 10000;
@@ -142,8 +167,30 @@ app.post('/save-stock', authenticateToken, async (req, res) => {
         res.send('Update Successful');
     }
 });
-app.post('/purchase-product', authenticateToken, async (req, res) => {
+app.post('/approve-product', authenticateToken, async (req, res) => {
         try {
+            con.query(`Select *
+                               from \'order\'
+                               where order.id = ${req.body.id}`, function (err, result) {
+                if (err) throw err;
+                else {
+                    var inf2 = {
+                        stock_count: result[0].stock_count - prod.count,
+                    }
+                    try {
+                        con.query(`Update product
+                                           set ?
+                                           where product.id = ${prod.id}`, inf2, function (err, result) {
+                            if (err) throw err;
+                            else {
+
+                            }
+                        });
+                    } catch (e) {
+                        console.log(e);
+                    }
+                }
+            });
             req.body.itemList.forEach((prod) => {
                 var inf = {
                     stock_count: prod.count
