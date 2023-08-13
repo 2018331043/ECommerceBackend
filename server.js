@@ -167,104 +167,70 @@ app.post('/save-stock', authenticateToken, async (req, res) => {
         res.send('Update Successful');
     }
 });
-app.post('/approve-product', authenticateToken, async (req, res) => {
-        try {
+app.post('/purchase-product', authenticateToken, async (req, res) => {
+    try{
+        req.body.itemList.forEach(pd=>{
+            var info = {
+                stock_count:pd.count
+            }
             con.query(`Select *
-                               from \'order\'
-                               where order.id = ${req.body.id}`, function (err, result) {
+                       from product
+                       where product.id = ${pd.id}`, function (err, result) {
                 if (err) throw err;
-                else {
-                    var inf2 = {
-                        stock_count: result[0].stock_count - prod.count,
-                    }
-                    try {
-                        con.query(`Update product
-                                           set ?
-                                           where product.id = ${prod.id}`, inf2, function (err, result) {
+                else{
+                    try{
+                        const order={
+                            customer_id:req.user.id,
+                            product_id:pd.id,
+                            product_quantity:pd.count,
+                            supplier_id:4,
+                            status:0,
+                            price:pd.count*result[0].per_unit_price
+                        }
+                        con.query(`Insert into \`order\` 
+                                        Set ? `,order ,function (err, result) {
                             if (err) throw err;
-                            else {
-
+                            else{
+                                // res.send('Order Placed');
                             }
                         });
-                    } catch (e) {
+                    }catch (e){
                         console.log(e);
                     }
                 }
             });
-            req.body.itemList.forEach((prod) => {
-                var inf = {
-                    stock_count: prod.count
-                }
-                try {
-                    con.query(`Select *
-                               from product
-                               where product.id = ${prod.id}`, function (err, result) {
-                        if (err) throw err;
-                        else {
-                            var inf2 = {
-                                stock_count: result[0].stock_count - prod.count,
-                            }
-                            try {
-                                con.query(`Update product
-                                           set ?
-                                           where product.id = ${prod.id}`, inf2, function (err, result) {
-                                    if (err) throw err;
-                                    else {
+        })
 
-                                    }
-                                });
-                            } catch (e) {
-                                console.log(e);
-                            }
-                        }
-                    });
-                } catch (e) {
-                    console.log(e);
-                }
-            })
-            try {
-                con.query(`Select *
-                        from bank
-                            where bank.user_id = ${req.user.id}`, function (err, result) {
-                    if (err) throw err;
-                    else {
-                        var inf2 = {
-                            amount: result[0].amount - req.body.total,
-                        }
-                        try {
-                            con.query(`Update bank
-                                                    set ?
-                                                     where bank.user_id = ${req.user.id}`, inf2, function (err, result) {
-                                if (err) throw err;
-                                else {
+    }catch (e){
+        console.log(e);
+    }finally {
+        res.send('Update Successful');
+    }
+});
+app.post('/approve-product', authenticateToken, async (req, res) => {
+        try {
+            con.query(`Select *
+                               from \`order\`
+                               where order.id = ${req.body.id}`, function (err, result) {
+                if (err) throw err;
+                else {
 
-                                }
-                            });
-                        } catch (e) {
-                            console.log(e);
-                        }
+                    var inf = {
+                        stock_count: result[0].product_quantity
                     }
-                });
-            } catch (e) {
-                console.log(e);
-            }
-            try {
-                con.query(`Select * from user where  user.type = 2 `,function (err, result) {
-                    if (err) throw err;
-                    else{
-                        var supplierId = result[0].id;
+                    try {
                         con.query(`Select *
-                                   from bank
-                                   where bank.user_id = ${supplierId}`, function (err, result) {
+                           from product
+                           where product.id = ${prod.id}`, function (err, result1) {
                             if (err) throw err;
                             else {
                                 var inf2 = {
-                                    amount: result[0].amount + req.body.total,
+                                    stock_count: result1[0].stock_count - result[0].product_quantity,
                                 }
                                 try {
-                                    con.query(`Update bank
-                                                    set ?
-                                                     where bank.user_id = ${supplierId}`, inf2, function (err, result) {
+                                    con.query(`Update product
+                                       set ?
+                                       where product.id = ${prod.id}`, inf2, function (err, result) {
                                         if (err) throw err;
                                         else {
 
@@ -275,11 +241,86 @@ app.post('/approve-product', authenticateToken, async (req, res) => {
                                 }
                             }
                         });
+                    } catch (e) {
+                        console.log(e);
+                    }
+
+                    try {
+                        con.query(`Select *
+                        from bank
+                            where bank.user_id = ${req.user.id}`, function (err, result1) {
+                            if (err) throw err;
+                            else {
+                                var inf2 = {
+                                    amount: result1[0].amount - result[0].price,
+                                }
+                                try {
+                                    con.query(`Update bank
+                                                    set ?
+                                                     where bank.user_id = ${result[0].customer_id}`, inf2, function (err, result) {
+                                        if (err) throw err;
+                                        else {
+
+                                        }
+                                    });
+                                } catch (e) {
+                                    console.log(e);
+                                }
+                            }
+                        });
+                    } catch (e) {
+                        console.log(e);
+                    }
+                    try {
+                        con.query(`Select * from user where  user.type = 2 `,function (err, result1) {
+                            if (err) throw err;
+                            else{
+                                var supplierId = result1[0].id;
+                                con.query(`Select *
+                                   from bank
+                                   where bank.user_id = ${supplierId}`, function (err, result2) {
+                                    if (err) throw err;
+                                    else {
+                                        var inf2 = {
+                                            amount: result2[0].amount + result[0].price,
+                                        }
+                                        try {
+                                            con.query(`Update bank
+                                                    set ?
+                                                     where bank.user_id = ${supplierId}`, inf2, function (err, result) {
+                                                if (err) throw err;
+                                                else {
+
+                                                }
+                                            });
+                                        } catch (e) {
+                                            console.log(e);
+                                        }
+                                    }
+                                });
+                            }
+                        });
+                    } catch (e) {
+                        console.log(e);
+                    }
+                }
+            });
+            var inf2 = {
+                status: 1,
+            }
+            try {
+                con.query(`Update \`order\`
+                                    set ?
+                                     where order.id = ${req.body.id}`, inf2, function (err, result) {
+                    if (err) throw err;
+                    else {
+
                     }
                 });
             } catch (e) {
                 console.log(e);
             }
+
         }catch (e) {
             console.log(e);
         } finally {
